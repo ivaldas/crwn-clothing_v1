@@ -1,5 +1,11 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithRedirect, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import {
+	getAuth,
+	signInWithRedirect,
+	signInWithPopup,
+	GoogleAuthProvider,
+	createUserWithEmailAndPassword
+} from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -12,15 +18,17 @@ const firebaseConfig = {
 };
 const firebaseApp = initializeApp(firebaseConfig);
 
-const provider = new GoogleAuthProvider();
-provider.setCustomParameters({
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
 	prompt: 'select_account'
 });
 
 export const auth = getAuth();
-export const signInWithGooglePopup = () => signInWithPopup(auth, provider);
+export const signInWithGooglePopup = () => signInWithPopup(auth, googleProvider);
+export const signInWithGoogleRedirect = () => signInWithRedirect(auth, googleProvider);
 export const db = getFirestore();
-export const createUserDocumentFromAuth = async (userAuth) => {
+export const createUserDocumentFromAuth = async (userAuth, aditionalInfo = {}) => {
+	if (!userAuth) return;
 	const userDocRef = doc(db, 'users', userAuth.uid);
 	const userSnapshot = await getDoc(userDocRef);
 	// check if user data exists
@@ -30,11 +38,15 @@ export const createUserDocumentFromAuth = async (userAuth) => {
 		const createdAt = new Date();
 		try {
 			// create / set the documentwith the data from userAuth in my collection
-			await setDoc(userDocRef, { displayName, email, createdAt });
+			await setDoc(userDocRef, { displayName, email, createdAt, ...aditionalInfo });
 		} catch (error) {
 			console.log('error creating the user', error.message);
 		}
 	}
 	// if user data exists
 	return userDocRef;
+};
+export const createAuthUserWithEmailAndPassword = async (email, password) => {
+	if (!email || !password) return;
+	return await createUserWithEmailAndPassword(auth, email, password);
 };
